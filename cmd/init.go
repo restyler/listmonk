@@ -930,6 +930,31 @@ func initCron(co *core.Core) {
 	lo.Printf("IMPORTANT: database slow query caching is enabled. Aggregate numbers and stats will not be realtime. Next refresh at: %v", c.Entries()[0].Next)
 }
 
+// initDynamicSegmentsCron initializes the cron job for processing dynamic segments.
+func initDynamicSegmentsCron(co *core.Core, interval string) {
+	if interval == "" {
+		lo.Println("error: invalid dynamic segments cron interval string")
+		return
+	}
+
+	c := cron.New()
+	_, err := c.Add(interval, func() {
+		lo.Println("executing dynamic segments")
+		if err := co.ExecuteAllDynamicSegments(); err != nil {
+			lo.Printf("error executing dynamic segments: %v", err)
+		} else {
+			lo.Println("done executing dynamic segments")
+		}
+	})
+	if err != nil {
+		lo.Printf("error initializing dynamic segments cron: %v", err)
+		return
+	}
+
+	c.Start()
+	lo.Printf("dynamic segments processing enabled. Next run at: %v", c.Entries()[0].Next)
+}
+
 // awaitReload waits for a SIGHUP signal to reload the app. Every setting change on the UI causes a reload.
 func awaitReload(sigChan chan os.Signal, closerWait chan bool, closer func()) chan bool {
 	// The blocking signal handler that main() waits on.

@@ -216,6 +216,50 @@ type List struct {
 	Total int `db:"total" json:"-"`
 }
 
+// SQLSnippet represents a reusable SQL query snippet.
+type SQLSnippet struct {
+	Base
+
+	Name        string   `db:"name" json:"name"`
+	Description string   `db:"description" json:"description"`
+	QuerySQL    string   `db:"query_sql" json:"query_sql"`
+	CreatedBy   null.Int `db:"created_by" json:"created_by,omitempty"`
+	IsActive    bool     `db:"is_active" json:"is_active"`
+}
+
+// DynamicSegment represents a dynamic segment configuration.
+type DynamicSegment struct {
+	Base
+
+	UUID         string          `db:"uuid" json:"uuid"`
+	Name         string          `db:"name" json:"name"`
+	Description  string          `db:"description" json:"description"`
+	ListID       int             `db:"list_id" json:"list_id"`
+	SnippetID    int             `db:"snippet_id" json:"snippet_id"`
+	IsActive     bool            `db:"is_active" json:"is_active"`
+	LastRunAt    null.Time       `db:"last_run_at" json:"last_run_at,omitempty"`
+	LastRunStats json.RawMessage `db:"last_run_stats" json:"last_run_stats,omitempty"`
+	CreatedBy    null.Int        `db:"created_by" json:"created_by,omitempty"`
+
+	// Joined fields
+	SnippetName string `db:"snippet_name" json:"snippet_name,omitempty"`
+	QuerySQL    string `db:"query_sql" json:"query_sql,omitempty"`
+	ListName    string `db:"list_name" json:"list_name,omitempty"`
+}
+
+// DynamicSegmentRun represents a single execution of a dynamic segment.
+type DynamicSegmentRun struct {
+	ID              int         `db:"id" json:"id"`
+	SegmentID       int         `db:"segment_id" json:"segment_id"`
+	AddedCount      int         `db:"added_count" json:"added_count"`
+	RemovedCount    int         `db:"removed_count" json:"removed_count"`
+	TotalMatched    int         `db:"total_matched" json:"total_matched"`
+	ExecutionTimeMs int         `db:"execution_time_ms" json:"execution_time_ms"`
+	Status          string      `db:"status" json:"status"`
+	ErrorMessage    null.String `db:"error_message" json:"error_message,omitempty"`
+	CreatedAt       null.Time   `db:"created_at" json:"created_at"`
+}
+
 // Campaign represents an e-mail campaign.
 type Campaign struct {
 	Base

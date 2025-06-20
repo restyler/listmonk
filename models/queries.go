@@ -49,6 +49,26 @@ type Queries struct {
 	DeleteSubscriptionsByQuery             string     `query:"delete-subscriptions-by-query"`
 	UnsubscribeSubscribersFromListsByQuery string     `query:"unsubscribe-subscribers-from-lists-by-query"`
 
+	// SQL Snippets
+	CreateSQLSnippet *sqlx.Stmt `query:"create-sql-snippet"`
+	GetSQLSnippets   *sqlx.Stmt `query:"get-sql-snippets"`
+	GetSQLSnippet    *sqlx.Stmt `query:"get-sql-snippet"`
+	UpdateSQLSnippet *sqlx.Stmt `query:"update-sql-snippet"`
+	DeleteSQLSnippet *sqlx.Stmt `query:"delete-sql-snippet"`
+
+	// Dynamic Segments
+	CreateDynamicSegment         *sqlx.Stmt `query:"create-dynamic-segment"`
+	GetDynamicSegments           *sqlx.Stmt `query:"get-dynamic-segments"`
+	GetDynamicSegment            *sqlx.Stmt `query:"get-dynamic-segment"`
+	UpdateDynamicSegment         *sqlx.Stmt `query:"update-dynamic-segment"`
+	UpdateDynamicSegmentRunStats *sqlx.Stmt `query:"update-dynamic-segment-run-stats"`
+	DeleteDynamicSegment         *sqlx.Stmt `query:"delete-dynamic-segment"`
+	GetActiveDynamicSegments     *sqlx.Stmt `query:"get-active-dynamic-segments"`
+
+	// Dynamic Segment Runs
+	CreateDynamicSegmentRun *sqlx.Stmt `query:"create-dynamic-segment-run"`
+	GetDynamicSegmentRuns   *sqlx.Stmt `query:"get-dynamic-segment-runs"`
+
 	CreateList      *sqlx.Stmt `query:"create-list"`
 	QueryLists      string     `query:"query-lists"`
 	GetLists        *sqlx.Stmt `query:"get-lists"`

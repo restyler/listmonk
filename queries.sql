@@ -425,6 +425,104 @@ WITH subs AS (%query%)
 UPDATE subscriber_lists SET status='unsubscribed', updated_at=NOW()
     WHERE (subscriber_id, list_id) = ANY(SELECT a, b FROM UNNEST(ARRAY(SELECT id FROM subs)) a, UNNEST($5::INT[]) b);
 
+-- SQL snippets
+-- name: create-sql-snippet
+INSERT INTO sql_snippets (name, description, query_sql, created_by)
+    VALUES($1, $2, $3, $4) RETURNING id;
+
+-- name: get-sql-snippets
+SELECT * FROM sql_snippets WHERE 
+    ($1 = 0 OR id = $1) AND
+    ($2 = '' OR name ILIKE $2) AND
+    ($3::BOOLEAN IS NULL OR is_active = $3::BOOLEAN)
+    ORDER BY name ASC OFFSET $4 LIMIT (CASE WHEN $5 < 1 THEN NULL ELSE $5 END);
+
+-- name: get-sql-snippet
+SELECT * FROM sql_snippets WHERE 
+    CASE 
+        WHEN $1 > 0 THEN id = $1
+        WHEN $2 != '' THEN name = $2
+    END;
+
+-- name: update-sql-snippet
+UPDATE sql_snippets SET
+    name = (CASE WHEN $2 != '' THEN $2 ELSE name END),
+    description = (CASE WHEN $3 != '' THEN $3 ELSE description END),
+    query_sql = (CASE WHEN $4 != '' THEN $4 ELSE query_sql END),
+    is_active = (CASE WHEN $5::BOOLEAN IS NOT NULL THEN $5::BOOLEAN ELSE is_active END),
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: delete-sql-snippet
+DELETE FROM sql_snippets WHERE id = $1;
+
+-- Dynamic segments
+-- name: create-dynamic-segment
+INSERT INTO dynamic_segments (uuid, name, description, list_id, snippet_id, created_by)
+    VALUES($1, $2, $3, $4, $5, $6) RETURNING id;
+
+-- name: get-dynamic-segments
+SELECT ds.*, ss.name as snippet_name, ss.query_sql, l.name as list_name
+    FROM dynamic_segments ds
+    LEFT JOIN sql_snippets ss ON ds.snippet_id = ss.id
+    LEFT JOIN lists l ON ds.list_id = l.id
+    WHERE 
+        ($1 = 0 OR ds.id = $1) AND
+        ($2 = '' OR ds.uuid = $2::UUID) AND
+        ($3 = 0 OR ds.list_id = $3) AND
+        ($4 = 0 OR ds.snippet_id = $4) AND
+        ($5::BOOLEAN IS NULL OR ds.is_active = $5::BOOLEAN)
+    ORDER BY ds.name ASC OFFSET $6 LIMIT (CASE WHEN $7 < 1 THEN NULL ELSE $7 END);
+
+-- name: get-dynamic-segment
+SELECT ds.*, ss.name as snippet_name, ss.query_sql, l.name as list_name
+    FROM dynamic_segments ds
+    LEFT JOIN sql_snippets ss ON ds.snippet_id = ss.id
+    LEFT JOIN lists l ON ds.list_id = l.id
+    WHERE 
+        CASE 
+            WHEN $1 > 0 THEN ds.id = $1
+            WHEN $2 != '' THEN ds.uuid = $2::UUID
+        END;
+
+-- name: update-dynamic-segment
+UPDATE dynamic_segments SET
+    name = (CASE WHEN $2 != '' THEN $2 ELSE name END),
+    description = (CASE WHEN $3 != '' THEN $3 ELSE description END),
+    list_id = (CASE WHEN $4 > 0 THEN $4 ELSE list_id END),
+    snippet_id = (CASE WHEN $5 > 0 THEN $5 ELSE snippet_id END),
+    is_active = (CASE WHEN $6::BOOLEAN IS NOT NULL THEN $6::BOOLEAN ELSE is_active END),
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: update-dynamic-segment-run-stats
+UPDATE dynamic_segments SET
+    last_run_at = NOW(),
+    last_run_stats = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: delete-dynamic-segment
+DELETE FROM dynamic_segments WHERE id = $1;
+
+-- name: get-active-dynamic-segments
+SELECT ds.*, ss.query_sql, l.name as list_name
+    FROM dynamic_segments ds
+    LEFT JOIN sql_snippets ss ON ds.snippet_id = ss.id
+    LEFT JOIN lists l ON ds.list_id = l.id
+    WHERE ds.is_active = true AND ss.is_active = true
+    ORDER BY ds.id;
+
+-- Dynamic segment runs
+-- name: create-dynamic-segment-run
+INSERT INTO dynamic_segment_runs (segment_id, added_count, removed_count, total_matched, execution_time_ms, status, error_message)
+    VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id;
+
+-- name: get-dynamic-segment-runs
+SELECT * FROM dynamic_segment_runs 
+    WHERE ($1 = 0 OR segment_id = $1)
+    ORDER BY created_at DESC OFFSET $2 LIMIT (CASE WHEN $3 < 1 THEN NULL ELSE $3 END);
+
 
 -- lists
 -- name: get-lists

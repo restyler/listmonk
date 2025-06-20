@@ -87,6 +87,29 @@ func (a *App) QuerySubscribers(c echo.Context) error {
 
 	// Does the user have the subscribers:sql_query permission?
 	query := formatSQLExp(c.FormValue("query"))
+
+	// Check if a SQL snippet ID is provided
+	snippetIDStr := c.FormValue("snippet_id")
+	if snippetIDStr != "" && query == "" {
+		if !user.HasPerm(auth.PermSubscribersSqlQuery) {
+			return echo.NewHTTPError(http.StatusForbidden,
+				a.i18n.Ts("globals.messages.permissionDenied", "name", auth.PermSubscribersSqlQuery))
+		}
+
+		// Parse snippet ID
+		snippetID, err := strconv.Atoi(snippetIDStr)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, a.i18n.T("globals.messages.invalidID"))
+		}
+
+		// Get the SQL snippet
+		snippet, err := a.core.GetSQLSnippet(snippetID, "")
+		if err != nil {
+			return err
+		}
+		query = snippet.QuerySQL
+	}
+
 	if query != "" {
 		if !user.HasPerm(auth.PermSubscribersSqlQuery) {
 			return echo.NewHTTPError(http.StatusForbidden,

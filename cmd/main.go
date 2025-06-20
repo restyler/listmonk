@@ -236,6 +236,11 @@ func main() {
 		initCron(core)
 	}
 
+	// Start dynamic segments cron job.
+	if ko.Bool("app.dynamic_segments_enabled") {
+		initDynamicSegmentsCron(core, ko.String("app.dynamic_segments_interval"))
+	}
+
 	// Start the campaign manager workers. The campaign batches (fetch from DB, push out
 	// messages) get processed at the specified interval.
 	go mgr.Run()

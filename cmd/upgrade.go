@@ -41,6 +41,7 @@ var migList = []migFunc{
 	{"v4.0.0", migrations.V4_0_0},
 	{"v4.1.0", migrations.V4_1_0},
 	{"v5.0.0", migrations.V5_0_0},
+	{"v5.1.0", migrations.V5_1_0},
 }
 
 // upgrade upgrades the database to the current version by running SQL migration files
@@ -144,8 +145,12 @@ func getLastMigrationVersion(db *sqlx.DB) (string, error) {
 		if isTableNotExistErr(err) {
 			return "v0.0.0", nil
 		}
+
 		return v, err
 	}
+
+	fmt.Println("getLastMigrationVersion22", v)
+
 	return v, nil
 }
 

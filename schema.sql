@@ -350,6 +350,66 @@ CREATE TABLE sessions (
 );
 DROP INDEX IF EXISTS idx_sessions; CREATE INDEX idx_sessions ON sessions (id, created_at);
 
+-- sql_snippets
+DROP TABLE IF EXISTS sql_snippets CASCADE;
+CREATE TABLE sql_snippets (
+    id               SERIAL PRIMARY KEY,
+    name             TEXT NOT NULL UNIQUE,
+    description      TEXT,
+    query_sql        TEXT NOT NULL,
+    is_active        BOOLEAN DEFAULT true,
+    created_by       INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Insert default SQL snippets
+INSERT INTO sql_snippets (name, description, query_sql) VALUES
+    ('Active Subscribers', 'Get all confirmed subscribers', 'status = ''confirmed'''),
+    ('Recent Signups', 'Subscribers who joined in the last 30 days', 'status = ''confirmed'' AND created_at >= NOW() - INTERVAL ''30 days'''),
+    ('Inactive Subscribers', 'Subscribers who haven''t been sent emails recently', 'status = ''confirmed'' AND updated_at <= NOW() - INTERVAL ''90 days'''),
+    ('High Value Subscribers', 'Subscribers with age greater than 39', '(subscribers.attribs->>''age'')::INT > 39'),
+    ('Premium Tier', 'Subscribers in premium tier', 'subscribers.attribs->>''tier'' = ''premium'''),
+    ('Active in Last Week', 'Subscribers active in the last 7 days', 'status = ''confirmed'' AND updated_at >= NOW() - INTERVAL ''7 days''')
+ON CONFLICT (name) DO NOTHING;
+
+-- dynamic_segments  
+DROP TABLE IF EXISTS dynamic_segments CASCADE;
+CREATE TABLE dynamic_segments (
+    id               SERIAL PRIMARY KEY,
+    uuid             uuid NOT NULL UNIQUE,
+    name             TEXT NOT NULL,
+    description      TEXT,
+    list_id          INTEGER NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
+    snippet_id       INTEGER REFERENCES sql_snippets(id) ON DELETE SET NULL,
+    is_active        BOOLEAN DEFAULT true,
+    last_run_at      TIMESTAMP WITH TIME ZONE,
+    last_run_stats   JSONB,
+    created_by       INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(name, list_id)
+);
+DROP INDEX IF EXISTS idx_dynamic_segments_list_id; CREATE INDEX idx_dynamic_segments_list_id ON dynamic_segments(list_id);
+DROP INDEX IF EXISTS idx_dynamic_segments_snippet_id; CREATE INDEX idx_dynamic_segments_snippet_id ON dynamic_segments(snippet_id);
+DROP INDEX IF EXISTS idx_dynamic_segments_is_active; CREATE INDEX idx_dynamic_segments_is_active ON dynamic_segments(is_active);
+
+-- dynamic_segment_runs
+DROP TABLE IF EXISTS dynamic_segment_runs CASCADE;
+CREATE TABLE dynamic_segment_runs (
+    id               SERIAL PRIMARY KEY,
+    segment_id       INTEGER NOT NULL REFERENCES dynamic_segments(id) ON DELETE CASCADE,
+    added_count      INTEGER DEFAULT 0,
+    removed_count    INTEGER DEFAULT 0,
+    total_matched    INTEGER DEFAULT 0,
+    execution_time_ms INTEGER DEFAULT 0,
+    status           TEXT NOT NULL DEFAULT 'success',
+    error_message    TEXT,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+DROP INDEX IF EXISTS idx_dynamic_segment_runs_segment_id; CREATE INDEX idx_dynamic_segment_runs_segment_id ON dynamic_segment_runs(segment_id);
+DROP INDEX IF EXISTS idx_dynamic_segment_runs_created_at; CREATE INDEX idx_dynamic_segment_runs_created_at ON dynamic_segment_runs(created_at);
+
 -- materialized views
 
 -- dashboard stats

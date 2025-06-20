@@ -120,6 +120,24 @@ func initHTTPHandlers(e *echo.Echo, a *App) {
 		g.DELETE("/api/subscribers/:id", pm(hasID(a.DeleteSubscriber), "subscribers:manage"))
 		g.DELETE("/api/subscribers", pm(a.DeleteSubscribers, "subscribers:manage"))
 
+		// SQL Snippets operations.
+		g.GET("/api/sql-snippets", pm(a.HandleGetSQLSnippets, "subscribers:sql_query"))
+		g.GET("/api/sql-snippets/:id", pm(hasID(a.HandleGetSQLSnippets), "subscribers:sql_query"))
+		g.POST("/api/sql-snippets", pm(a.HandleCreateSQLSnippet, "subscribers:sql_query"))
+		g.PUT("/api/sql-snippets/:id", pm(hasID(a.HandleUpdateSQLSnippet), "subscribers:sql_query"))
+		g.DELETE("/api/sql-snippets/:id", pm(hasID(a.HandleDeleteSQLSnippet), "subscribers:sql_query"))
+		g.POST("/api/sql-snippets/validate", pm(a.HandleValidateSQLSnippet, "subscribers:sql_query"))
+
+		// Dynamic Segments operations.
+		g.GET("/api/dynamic-segments", pm(a.HandleGetDynamicSegments, "subscribers:sql_query"))
+		g.GET("/api/dynamic-segments/:id", pm(hasID(a.HandleGetDynamicSegments), "subscribers:sql_query"))
+		g.POST("/api/dynamic-segments", pm(a.HandleCreateDynamicSegment, "subscribers:sql_query"))
+		g.PUT("/api/dynamic-segments/:id", pm(hasID(a.HandleUpdateDynamicSegment), "subscribers:sql_query"))
+		g.DELETE("/api/dynamic-segments/:id", pm(hasID(a.HandleDeleteDynamicSegment), "subscribers:sql_query"))
+		g.POST("/api/dynamic-segments/:id/execute", pm(hasID(a.HandleExecuteDynamicSegment), "subscribers:sql_query"))
+		g.POST("/api/dynamic-segments/execute-all", pm(a.HandleExecuteAllDynamicSegments, "subscribers:sql_query"))
+		g.GET("/api/dynamic-segments/runs", pm(a.HandleGetDynamicSegmentRuns, "subscribers:sql_query"))
+
 		g.GET("/api/bounces", pm(a.GetBounces, "bounces:get"))
 		g.GET("/api/bounces/:id", pm(hasID(a.GetBounce), "bounces:get"))
 		g.DELETE("/api/bounces", pm(a.DeleteBounces, "bounces:manage"))
