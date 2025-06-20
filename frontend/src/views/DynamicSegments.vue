@@ -38,11 +38,10 @@
 
     <br />
 
-    <b-table :data="segments.results ?? []" :loading="loading.segments" paginated backend-pagination 
-      pagination-position="both" @page-change="onPageChange" :current-page="queryParams.page" 
+        <b-table :data="segments.results ?? []" :loading="loading.segments" paginated backend-pagination
+      pagination-position="both" @page-change="onPageChange" :current-page="queryParams.page"
       :per-page="segments.perPage" :total="segments.total" hoverable>
-
-      <b-table-column v-slot="props" field="name" label="Name" sortable>
+<b-table-column v-slot="props" field="name" label="Name" sortable>
         <strong>{{ props.row.name }}</strong>
         <br>
         <span class="is-size-7 has-text-grey">{{ props.row.description }}</span>
@@ -71,13 +70,13 @@
 
       <b-table-column v-slot="props" cell-class="actions" align="right">
         <div>
-          <a href="#" @click.prevent="showEditForm(props.row)" data-cy="btn-edit" 
+          <a href="#" @click.prevent="showEditForm(props.row)" data-cy="btn-edit"
             :aria-label="$t('globals.buttons.edit')">
             <b-tooltip label="Edit" type="is-dark">
               <b-icon icon="pencil-outline" size="is-small" />
             </b-tooltip>
           </a>
-          <a href="#" @click.prevent="deleteSegment(props.row)" data-cy="btn-delete" 
+          <a href="#" @click.prevent="deleteSegment(props.row)" data-cy="btn-delete"
             :aria-label="$t('globals.buttons.delete')">
             <b-tooltip label="Delete" type="is-dark">
               <b-icon icon="trash-can-outline" size="is-small" />
@@ -127,7 +126,7 @@
               </b-radio-button>
             </b-field>
 
-            <b-field v-if="form.sqlSource === 'snippet'" label="SQL Snippet" 
+            <b-field v-if="form.sqlSource === 'snippet'" label="SQL Snippet"
               :type="errors.sqlSnippetId ? 'is-danger' : ''" :message="errors.sqlSnippetId">
               <b-select v-model="form.sqlSnippetId" expanded>
                 <option value="">Select a snippet</option>
@@ -137,7 +136,7 @@
               </b-select>
             </b-field>
 
-            <b-field v-if="form.sqlSource === 'custom'" label="Custom SQL WHERE Condition" 
+            <b-field v-if="form.sqlSource === 'custom'" label="Custom SQL WHERE Condition"
               :type="errors.query ? 'is-danger' : ''" :message="errors.query">
               <b-input v-model="form.query" type="textarea" :rows="6" required />
               <p class="help">
@@ -165,9 +164,7 @@
 
 <script>
 import Vue from 'vue';
-import { mapState } from 'vuex';
 import EmptyPlaceholder from '../components/EmptyPlaceholder.vue';
-import { uris } from '../constants';
 
 export default Vue.extend({
   components: {
@@ -228,37 +225,117 @@ export default Vue.extend({
     },
 
     async querySegments() {
+      console.log('=== querySegments called in DynamicSegments ===');
       this.loading.segments = true;
       try {
-        const params = new URLSearchParams();
-        params.append('page', this.queryParams.page);
-        params.append('per_page', this.segments.perPage);
-        if (this.queryParams.query) {
-          params.append('query', this.queryParams.query);
+        console.log('Attempting to load dynamic segments...');
+        console.log('$api available:', !!this.$api);
+        console.log('getDynamicSegments method available:', !!this.$api?.getDynamicSegments);
+
+        if (!this.$api || !this.$api.getDynamicSegments) {
+          console.error('API or getDynamicSegments method not available');
+          this.segments = { results: [], total: 0, perPage: 20 };
+          return;
         }
 
-        const response = await this.$http.get(`${uris.dynamicSegments}?${params.toString()}`);
-        this.segments = response.data.data;
+        const params = {
+          page: this.queryParams.page,
+          per_page: this.segments.perPage,
+        };
+        if (this.queryParams.query) {
+          params.query = this.queryParams.query;
+        }
+
+        console.log('API params:', params);
+        const response = await this.$api.getDynamicSegments(params);
+        console.log('Dynamic segments response:', response);
+
+        if (response) {
+          this.segments = response;
+          console.log('Dynamic segments loaded successfully:', this.segments.results?.length || 0, 'segments');
+        } else {
+          console.warn('Unexpected response structure:', response);
+          this.segments = { results: [], total: 0, perPage: 20 };
+        }
       } catch (e) {
+        console.error('Error loading dynamic segments:', e);
+        console.error('Error details:', {
+          message: e.message,
+          response: e.response,
+          stack: e.stack,
+        });
+        this.segments = { results: [], total: 0, perPage: 20 };
         this.$utils.toast(e.message || 'Error loading segments', 'is-danger');
       }
       this.loading.segments = false;
     },
 
     async loadLists() {
+      console.log('=== loadLists called in DynamicSegments ===');
       try {
-        const response = await this.$http.get(uris.lists);
-        this.lists = response.data.data.results || [];
+        console.log('Attempting to load lists...');
+        console.log('$api available:', !!this.$api);
+        console.log('getLists method available:', !!this.$api?.getLists);
+
+        if (!this.$api || !this.$api.getLists) {
+          console.error('API or getLists method not available');
+          this.lists = [];
+          return;
+        }
+
+        const response = await this.$api.getLists({ per_page: 'all' });
+        console.log('Lists response:', response);
+
+        if (response && response.results) {
+          this.lists = response.results;
+          console.log('Lists loaded successfully:', this.lists.length, 'lists');
+        } else {
+          console.warn('Unexpected response structure:', response);
+          this.lists = [];
+        }
       } catch (e) {
+        console.error('Error loading lists:', e);
+        console.error('Error details:', {
+          message: e.message,
+          response: e.response,
+          stack: e.stack,
+        });
+        this.lists = [];
         this.$utils.toast(e.message || 'Error loading lists', 'is-danger');
       }
     },
 
     async loadSqlSnippets() {
+      console.log('=== loadSqlSnippets called in DynamicSegments ===');
       try {
-        const response = await this.$http.get(uris.sqlSnippets);
-        this.sqlSnippets = response.data.data.results || [];
+        console.log('Attempting to load SQL snippets...');
+        console.log('$api available:', !!this.$api);
+        console.log('getSQLSnippets method available:', !!this.$api?.getSQLSnippets);
+
+        if (!this.$api || !this.$api.getSQLSnippets) {
+          console.error('API or getSQLSnippets method not available');
+          this.sqlSnippets = [];
+          return;
+        }
+
+        const response = await this.$api.getSQLSnippets({ per_page: 'all' });
+        console.log('SQL snippets response:', response);
+
+        if (response && response.results) {
+          this.sqlSnippets = response.results;
+          console.log('SQL snippets loaded successfully:', this.sqlSnippets.length, 'snippets');
+        } else {
+          console.warn('Unexpected response structure:', response);
+          this.sqlSnippets = [];
+        }
       } catch (e) {
+        console.error('Error loading SQL snippets:', e);
+        console.error('Error details:', {
+          message: e.message,
+          response: e.response,
+          stack: e.stack,
+        });
+        this.sqlSnippets = [];
         this.$utils.toast(e.message || 'Error loading SQL snippets', 'is-danger');
       }
     },
@@ -271,15 +348,34 @@ export default Vue.extend({
     },
 
     showEditForm(segment) {
+      console.log('=== showEditForm called in DynamicSegments ===');
+      console.log('Segment data:', segment);
+
       this.isEditing = true;
       this.form = {
-        ...segment,
-        listId: segment.list.id,
-        sqlSnippetId: segment.sqlSnippet ? segment.sqlSnippet.id : '',
-        sqlSource: segment.sqlSnippet ? 'snippet' : 'custom',
+        id: segment.id,
+        name: segment.name,
+        description: segment.description,
+        listId: segment.listId || segment.list_id || (segment.list ? segment.list.id : ''),
+        sqlSnippetId: segment.snippetId || segment.snippet_id || (segment.sqlSnippet ? segment.sqlSnippet.id : ''),
+        query: segment.query || '',
+        sqlSource: (segment.snippetId || segment.snippet_id || segment.sqlSnippet) ? 'snippet' : 'custom',
+        enabled: this.getSegmentEnabledValue(segment),
       };
+
+      console.log('Form data after mapping:', this.form);
       this.errors = {};
       this.isFormVisible = true;
+    },
+
+    getSegmentEnabledValue(segment) {
+      if (segment.isActive !== undefined) {
+        return segment.isActive;
+      }
+      if (segment.is_active !== undefined) {
+        return segment.is_active;
+      }
+      return true;
     },
 
     hideForm() {
@@ -291,6 +387,7 @@ export default Vue.extend({
     },
 
     async onSubmitForm() {
+      console.log('=== onSubmitForm called in DynamicSegments ===');
       this.loading.form = true;
       this.errors = {};
 
@@ -302,17 +399,51 @@ export default Vue.extend({
       }
       delete data.sqlSource;
 
+      // Map frontend field names to backend expected field names
+      data.list_id = data.listId;
+      data.snippet_id = data.sqlSnippetId;
+      data.is_active = data.enabled;
+      delete data.listId;
+      delete data.sqlSnippetId;
+      delete data.enabled;
+
+      console.log('Form data being submitted:', data);
+      console.log('isEditing:', this.isEditing);
+
       try {
+        console.log('$api available:', !!this.$api);
+
         if (this.isEditing) {
-          await this.$http.put(`${uris.dynamicSegments}/${this.form.id}`, data);
+          console.log('updateDynamicSegment method available:', !!this.$api?.updateDynamicSegment);
+          if (!this.$api || !this.$api.updateDynamicSegment) {
+            console.error('API or updateDynamicSegment method not available');
+            this.$utils.toast('API not available for updating segment', 'is-danger');
+            return;
+          }
+
+          data.id = this.form.id;
+          await this.$api.updateDynamicSegment(data);
           this.$utils.toast('Segment updated');
         } else {
-          await this.$http.post(uris.dynamicSegments, data);
+          console.log('createDynamicSegment method available:', !!this.$api?.createDynamicSegment);
+          if (!this.$api || !this.$api.createDynamicSegment) {
+            console.error('API or createDynamicSegment method not available');
+            this.$utils.toast('API not available for creating segment', 'is-danger');
+            return;
+          }
+
+          await this.$api.createDynamicSegment(data);
           this.$utils.toast('Segment created');
         }
         this.hideForm();
         this.querySegments();
       } catch (e) {
+        console.error('Error saving dynamic segment:', e);
+        console.error('Error details:', {
+          message: e.message,
+          response: e.response,
+          stack: e.stack,
+        });
         if (e.response && e.response.data && e.response.data.data) {
           this.errors = e.response.data.data;
         } else {
@@ -328,11 +459,29 @@ export default Vue.extend({
         confirmText: 'Delete',
         type: 'is-danger',
         onConfirm: async () => {
+          console.log('=== deleteSegment called in DynamicSegments ===');
+          console.log('Segment to delete:', segment);
+
           try {
-            await this.$http.delete(`${uris.dynamicSegments}/${segment.id}`);
+            console.log('$api available:', !!this.$api);
+            console.log('deleteDynamicSegment method available:', !!this.$api?.deleteDynamicSegment);
+
+            if (!this.$api || !this.$api.deleteDynamicSegment) {
+              console.error('API or deleteDynamicSegment method not available');
+              this.$utils.toast('API not available for deleting segment', 'is-danger');
+              return;
+            }
+
+            await this.$api.deleteDynamicSegment(segment.id);
             this.$utils.toast('Segment deleted');
             this.querySegments();
           } catch (e) {
+            console.error('Error deleting dynamic segment:', e);
+            console.error('Error details:', {
+              message: e.message,
+              response: e.response,
+              stack: e.stack,
+            });
             this.$utils.toast(e.message || 'Error deleting segment', 'is-danger');
           }
         },
@@ -348,4 +497,4 @@ export default Vue.extend({
     ]);
   },
 });
-</script> 
+</script>

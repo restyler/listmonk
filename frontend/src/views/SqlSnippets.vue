@@ -41,18 +41,17 @@
 
     <br />
 
-    <b-table :data="snippets.results ?? []" :loading="loading.snippets" paginated backend-pagination 
-      pagination-position="both" @page-change="onPageChange" :current-page="queryParams.page" 
+    <b-table :data="snippets.results ?? []" :loading="loading.snippets" paginated backend-pagination
+      pagination-position="both" @page-change="onPageChange" :current-page="queryParams.page"
       :per-page="snippets.perPage" :total="snippets.total" hoverable>
-
-      <b-table-column v-slot="props" field="name" label="Name" sortable>
+<b-table-column v-slot="props" field="name" label="Name" sortable>
         <strong>{{ props.row.name }}</strong>
         <br>
         <span class="is-size-7 has-text-grey">{{ props.row.description }}</span>
       </b-table-column>
 
       <b-table-column v-slot="props" field="query" label="Query">
-        <code class="is-size-7">{{ truncateQuery(props.row.query) }}</code>
+        <code class="is-size-7">{{ truncateQuery(props.row.querySql || props.row.query_sql || props.row.querySQL || props.row.query) }}</code>
         <br>
         <a href="#" @click.prevent="showQueryModal(props.row)" class="is-size-7">
           <b-icon icon="eye" size="is-small" />
@@ -70,19 +69,19 @@
 
       <b-table-column v-slot="props" cell-class="actions" align="right">
         <div>
-          <a href="#" @click.prevent="testQuery(props.row)" data-cy="btn-test" 
-            :aria-label="Test query">
+          <a href="#" @click.prevent="testQuery(props.row)" data-cy="btn-test"
+            aria-label="Test query">
             <b-tooltip label="Test query" type="is-dark">
               <b-icon icon="play-circle-outline" size="is-small" />
             </b-tooltip>
           </a>
-          <a href="#" @click.prevent="showEditForm(props.row)" data-cy="btn-edit" 
+          <a href="#" @click.prevent="showEditForm(props.row)" data-cy="btn-edit"
             :aria-label="$t('globals.buttons.edit')">
             <b-tooltip label="Edit" type="is-dark">
               <b-icon icon="pencil-outline" size="is-small" />
             </b-tooltip>
           </a>
-          <a href="#" @click.prevent="deleteSnippet(props.row)" data-cy="btn-delete" 
+          <a href="#" @click.prevent="deleteSnippet(props.row)" data-cy="btn-delete"
             :aria-label="$t('globals.buttons.delete')">
             <b-tooltip label="Delete" type="is-dark">
               <b-icon icon="trash-can-outline" size="is-small" />
@@ -97,7 +96,7 @@
     </b-table>
 
     <!-- Add / edit form modal -->
-    <b-modal scroll="keep" :aria-modal="true" :active.sync="isFormVisible" :width="850" @close="onFormClose">
+    <b-modal scroll="keep" :aria-modal="true" :active.sync="isFormVisible" :width="850" @close="onFormClose" @opened="onModalOpened">
       <div class="modal-card" style="width: auto">
         <header class="modal-card-head">
           <p class="modal-card-title">
@@ -114,11 +113,14 @@
               <b-input v-model="form.description" type="textarea" :maxlength="500" />
             </b-field>
 
-            <b-field label="SQL WHERE Condition" :type="errors.query ? 'is-danger' : ''" :message="errors.query">
-              <b-input v-model="form.query" type="textarea" :rows="8" required />
-              <p class="help">
-                Enter only the WHERE condition part. Examples: <code>status = 'confirmed'</code>, <code>(subscribers.attribs->>'age')::INT > 39</code>
-              </p>
+            <b-field label="SQL WHERE Condition"
+              message="Enter only the WHERE condition part. Examples: subscribers.status = 'enabled', (subscribers.attribs->'age')::INT > 39"
+              :type="errors.query ? 'is-danger' : ''">
+              <b-input v-model="form.query" type="textarea" rows="5"
+                placeholder="subscribers.status = 'enabled'"
+                :class="errors.query ? 'is-danger' : ''"
+                style="width: 100%;"
+                @input="onQueryInput" />
             </b-field>
 
             <div class="buttons">
@@ -129,16 +131,12 @@
 
             <div v-if="testResult" class="notification" :class="testResult.success ? 'is-success' : 'is-danger'">
               <div v-if="testResult.success">
-                <strong>Query executed successfully!</strong>
+                <strong>Query validation successful!</strong>
                 <br>
-                Found {{ testResult.count }} subscriber(s)
-                <div v-if="testResult.preview && testResult.preview.length > 0" class="mt-2">
-                  <strong>Sample IDs:</strong> {{ testResult.preview.join(', ') }}
-                  <span v-if="testResult.count > testResult.preview.length">...</span>
-                </div>
+                {{ testResult.message }}
               </div>
               <div v-else>
-                <strong>Query failed:</strong>
+                <strong>Query validation failed:</strong>
                 <br>
                 {{ testResult.error }}
               </div>
@@ -165,7 +163,7 @@
             <p>{{ selectedSnippet.description }}</p>
           </b-field>
           <b-field label="SQL Query">
-            <pre class="code-block">{{ selectedSnippet?.query }}</pre>
+            <pre class="code-block">{{ selectedSnippet?.querySql || selectedSnippet?.query_sql || selectedSnippet?.querySQL || selectedSnippet?.query }}</pre>
           </b-field>
         </section>
         <footer class="modal-card-foot">
@@ -178,9 +176,10 @@
 
 <script>
 import Vue from 'vue';
-import { mapState } from 'vuex';
+import {
+  validateSQLSnippet, createSQLSnippet, updateSQLSnippet, getSQLSnippets, deleteSQLSnippet,
+} from '../api';
 import EmptyPlaceholder from '../components/EmptyPlaceholder.vue';
-import { uris } from '../constants';
 
 export default Vue.extend({
   components: {
@@ -224,7 +223,8 @@ export default Vue.extend({
     },
 
     truncateQuery(query) {
-      return query.length > 100 ? query.substring(0, 100) + '...' : query;
+      if (!query) return '';
+      return query.length > 100 ? `${query.substring(0, 100)}...` : query;
     },
 
     onSearchInput() {
@@ -245,16 +245,18 @@ export default Vue.extend({
     async querySnippets() {
       this.loading.snippets = true;
       try {
-        const params = new URLSearchParams();
-        params.append('page', this.queryParams.page);
-        params.append('per_page', this.snippets.perPage);
+        const params = {
+          page: this.queryParams.page,
+          per_page: this.snippets.perPage,
+        };
         if (this.queryParams.query) {
-          params.append('query', this.queryParams.query);
+          params.query = this.queryParams.query;
         }
 
-        const response = await this.$http.get(`${uris.sqlSnippets}?${params.toString()}`);
-        this.snippets = response.data.data;
+        const response = await getSQLSnippets(params);
+        this.snippets = response;
       } catch (e) {
+        console.error('Error loading SQL snippets:', e);
         this.$utils.toast(e.message || 'Error loading snippets', 'is-danger');
       }
       this.loading.snippets = false;
@@ -269,11 +271,32 @@ export default Vue.extend({
     },
 
     showEditForm(snippet) {
+      console.log('=== showEditForm called ===');
+      console.log('Snippet object:', snippet);
+      console.log('snippet.querySql:', snippet.querySql);
+      console.log('snippet.query_sql:', snippet.query_sql);
+      console.log('snippet.querySQL:', snippet.querySQL);
+      console.log('snippet.query:', snippet.query);
       this.isEditing = true;
-      this.form = { ...snippet };
+      this.form = {
+        id: snippet.id,
+        name: snippet.name,
+        description: snippet.description,
+        query: snippet.querySql || snippet.query_sql || snippet.querySQL || snippet.query,
+      };
+
+      console.log('Form after assignment:', this.form);
+      console.log('Form query value:', this.form.query);
+
       this.errors = {};
       this.testResult = null;
       this.isFormVisible = true;
+
+      // Add a timeout to check if the form data is still there after Vue reactivity
+      setTimeout(() => {
+        console.log('Form data after timeout:', this.form);
+        console.log('Form query after timeout:', this.form.query);
+      }, 100);
     },
 
     showQueryModal(snippet) {
@@ -285,12 +308,19 @@ export default Vue.extend({
       this.isFormVisible = false;
     },
 
+    onModalOpened() {
+      console.log('=== Modal opened ===');
+      console.log('isEditing:', this.isEditing);
+      console.log('Form data when modal opened:', this.form);
+      console.log('Form query when modal opened:', this.form.query);
+    },
+
     onFormClose() {
       this.hideForm();
     },
 
     async testQuery(snippet) {
-      await this.testSqlQuery(snippet.query);
+      await this.testSqlQuery(snippet.querySql || snippet.query_sql || snippet.querySQL || snippet.query);
     },
 
     async testCurrentQuery() {
@@ -307,38 +337,58 @@ export default Vue.extend({
       this.testResult = null;
 
       try {
-        const response = await this.$http.post(`${uris.sqlSnippets}/test`, { query });
+        const response = await validateSQLSnippet({ query_sql: query });
+
         this.testResult = {
           success: true,
-          count: response.data.data.count,
-          preview: response.data.data.preview || [],
+          message: response.message || 'Query is valid',
         };
-        this.$utils.toast(`Query executed successfully! Found ${response.data.data.count} subscriber(s)`);
+        this.$utils.toast('Query validation successful!', 'is-success');
       } catch (e) {
+        console.error('Error validating SQL query:', e);
         this.testResult = {
           success: false,
-          error: e.response?.data?.message || e.message || 'Query execution failed',
+          error: e.response?.data?.message || e.message || 'Query validation failed',
         };
-        this.$utils.toast('Query test failed', 'is-danger');
+        this.$utils.toast(this.testResult.error, 'is-danger');
+      } finally {
+        this.loading.test = false;
       }
-      this.loading.test = false;
+    },
+
+    onQueryInput(value) {
+      console.log('Query input changed:', value);
+      console.log('Form.query is now:', this.form.query);
     },
 
     async onSubmitForm() {
+      console.log('=== onSubmitForm called ===');
+      console.log('Form data at submit:', this.form);
       this.loading.form = true;
       this.errors = {};
 
       try {
+        // Map form field names to match API expectations
+        const data = {
+          name: this.form.name,
+          description: this.form.description,
+          query_sql: this.form.query,
+        };
+
+        console.log('Data being sent to API:', data);
+
         if (this.isEditing) {
-          await this.$http.put(`${uris.sqlSnippets}/${this.form.id}`, this.form);
+          data.id = this.form.id;
+          await updateSQLSnippet(data);
           this.$utils.toast('Snippet updated');
         } else {
-          await this.$http.post(uris.sqlSnippets, this.form);
+          await createSQLSnippet(data);
           this.$utils.toast('Snippet created');
         }
         this.hideForm();
         this.querySnippets();
       } catch (e) {
+        console.error('Error saving SQL snippet:', e);
         if (e.response && e.response.data && e.response.data.data) {
           this.errors = e.response.data.data;
         } else {
@@ -355,10 +405,11 @@ export default Vue.extend({
         type: 'is-danger',
         onConfirm: async () => {
           try {
-            await this.$http.delete(`${uris.sqlSnippets}/${snippet.id}`);
+            await deleteSQLSnippet(snippet.id);
             this.$utils.toast('Snippet deleted');
             this.querySnippets();
           } catch (e) {
+            console.error('Error deleting SQL snippet:', e);
             this.$utils.toast(e.message || 'Error deleting snippet', 'is-danger');
           }
         },
@@ -382,4 +433,4 @@ export default Vue.extend({
   white-space: pre-wrap;
   word-break: break-all;
 }
-</style> 
+</style>

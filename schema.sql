@@ -365,12 +365,12 @@ CREATE TABLE sql_snippets (
 
 -- Insert default SQL snippets
 INSERT INTO sql_snippets (name, description, query_sql) VALUES
-    ('Active Subscribers', 'Get all confirmed subscribers', 'status = ''confirmed'''),
-    ('Recent Signups', 'Subscribers who joined in the last 30 days', 'status = ''confirmed'' AND created_at >= NOW() - INTERVAL ''30 days'''),
-    ('Inactive Subscribers', 'Subscribers who haven''t been sent emails recently', 'status = ''confirmed'' AND updated_at <= NOW() - INTERVAL ''90 days'''),
+    ('Enabled Subscribers', 'Get all enabled subscribers', 'subscribers.status = ''enabled'''),
+    ('Recent Signups', 'Subscribers who joined in the last 30 days', 'subscribers.status = ''enabled'' AND subscribers.created_at >= NOW() - INTERVAL ''30 days'''),
+    ('Inactive Subscribers', 'Subscribers who haven''t been sent emails recently', 'subscribers.status = ''enabled'' AND subscribers.updated_at <= NOW() - INTERVAL ''90 days'''),
     ('High Value Subscribers', 'Subscribers with age greater than 39', '(subscribers.attribs->>''age'')::INT > 39'),
     ('Premium Tier', 'Subscribers in premium tier', 'subscribers.attribs->>''tier'' = ''premium'''),
-    ('Active in Last Week', 'Subscribers active in the last 7 days', 'status = ''confirmed'' AND updated_at >= NOW() - INTERVAL ''7 days''')
+    ('Active in Last Week', 'Subscribers active in the last 7 days', 'subscribers.status = ''enabled'' AND subscribers.updated_at >= NOW() - INTERVAL ''7 days''')
 ON CONFLICT (name) DO NOTHING;
 
 -- dynamic_segments  

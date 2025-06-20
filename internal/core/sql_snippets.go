@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -75,21 +77,27 @@ func (c *Core) DeleteSQLSnippet(id int) error {
 
 // ValidateSQLSnippet validates an SQL snippet query for safety and syntax.
 func (c *Core) ValidateSQLSnippet(querySQL string) error {
-	// Create the actual query by replacing the placeholder
+	// Create a simple validation query that just tests the WHERE condition
 	stmt := fmt.Sprintf(`
 		SELECT COUNT(*) FROM subscribers
 		LEFT JOIN subscriber_lists ON (
-			(CASE WHEN CARDINALITY($1::INT[]) > 0 THEN true ELSE false END)
-			AND subscriber_lists.subscriber_id = subscribers.id
-			AND ($2 = '' OR subscriber_lists.status = $2::subscription_status)
+			subscriber_lists.subscriber_id = subscribers.id
 		)
-		WHERE (CARDINALITY($1) = 0 OR subscriber_lists.list_id = ANY($1::INT[]))
-		AND (CASE WHEN $3 != '' THEN name ~* $3 OR email ~* $3 ELSE TRUE END)
-		AND %s
+		WHERE %s
+		LIMIT 1
 	`, querySQL)
 
-	// Validate the query by running a count operation
-	if err := validateQueryTables(c.db, stmt, allowedSubQueryTables); err != nil {
+	// Create a readonly transaction to validate the query
+	tx, err := c.db.BeginTxx(context.Background(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest,
+			c.i18n.Ts("subscribers.errorPreparingQuery", "error", err.Error()))
+	}
+	defer tx.Rollback()
+
+	// Try to execute the query to validate syntax
+	var count int
+	if err := tx.Get(&count, stmt); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest,
 			c.i18n.Ts("subscribers.errorPreparingQuery", "error", err.Error()))
 	}

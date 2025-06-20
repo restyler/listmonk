@@ -261,18 +261,44 @@ export default Vue.extend({
   methods: {
     // Load SQL snippets from the API
     async loadSqlSnippets() {
+      console.log('=== loadSqlSnippets called in Subscribers ===');
       try {
-        const response = await this.$http.get(uris.sqlSnippets);
-        this.sqlSnippets = response.data.data.results || [];
+        console.log('Attempting to load SQL snippets...');
+        console.log('$api available:', !!this.$api);
+        console.log('getSQLSnippets method available:', !!this.$api?.getSQLSnippets);
+
+        if (!this.$api || !this.$api.getSQLSnippets) {
+          console.error('API or getSQLSnippets method not available');
+          this.sqlSnippets = [];
+          return;
+        }
+
+        const response = await this.$api.getSQLSnippets({ per_page: 'all' });
+        console.log('SQL snippets response:', response);
+
+        if (response && response.results) {
+          this.sqlSnippets = response.results;
+          console.log('SQL snippets loaded successfully:', this.sqlSnippets.length, 'snippets');
+        } else {
+          console.warn('Unexpected response structure:', response);
+          this.sqlSnippets = [];
+        }
       } catch (e) {
+        console.error('Error loading SQL snippets:', e);
+        console.error('Error details:', {
+          message: e.message,
+          response: e.response,
+          stack: e.stack,
+        });
+        this.sqlSnippets = [];
         this.$utils.toast(e.message || 'Error loading SQL snippets', 'is-danger');
       }
     },
 
     // Handle SQL snippet selection
     onSqlSnippetSelect(snippet) {
-      if (snippet && snippet.query) {
-        this.queryParams.queryExp = snippet.query;
+      if (snippet && snippet.querySql) {
+        this.queryParams.queryExp = snippet.querySql;
         this.selectedSqlSnippet = '';
       }
     },

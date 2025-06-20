@@ -8,6 +8,12 @@
       :label="$t('globals.terms.lists')">
       <b-menu-item :to="{ name: 'lists' }" tag="router-link" :active="activeItem.lists" data-cy="all-lists"
         icon="format-list-bulleted-square" :label="$t('menu.allLists')" />
+      <b-menu-item :to="{ name: 'dynamicSegments' }" tag="router-link"
+        :active="activeItem.dynamicSegments" data-cy="dynamic-segments"
+        icon="auto-fix" label="Dynamic Segments" />
+      <b-menu-item :to="{ name: 'sqlSnippets' }" tag="router-link"
+        :active="activeItem.sqlSnippets" data-cy="sql-snippets"
+        icon="code-braces" label="SQL Snippets" />
       <b-menu-item :to="{ name: 'forms' }" tag="router-link" :active="activeItem.forms" class="forms"
         icon="newspaper-variant-outline" :label="$t('menu.forms')" />
     </b-menu-item><!-- lists -->

@@ -231,15 +231,15 @@ type SQLSnippet struct {
 type DynamicSegment struct {
 	Base
 
-	UUID         string          `db:"uuid" json:"uuid"`
-	Name         string          `db:"name" json:"name"`
-	Description  string          `db:"description" json:"description"`
-	ListID       int             `db:"list_id" json:"list_id"`
-	SnippetID    int             `db:"snippet_id" json:"snippet_id"`
-	IsActive     bool            `db:"is_active" json:"is_active"`
-	LastRunAt    null.Time       `db:"last_run_at" json:"last_run_at,omitempty"`
-	LastRunStats json.RawMessage `db:"last_run_stats" json:"last_run_stats,omitempty"`
-	CreatedBy    null.Int        `db:"created_by" json:"created_by,omitempty"`
+	UUID         string         `db:"uuid" json:"uuid"`
+	Name         string         `db:"name" json:"name"`
+	Description  string         `db:"description" json:"description"`
+	ListID       int            `db:"list_id" json:"list_id"`
+	SnippetID    int            `db:"snippet_id" json:"snippet_id"`
+	IsActive     bool           `db:"is_active" json:"is_active"`
+	LastRunAt    null.Time      `db:"last_run_at" json:"last_run_at,omitempty"`
+	LastRunStats types.JSONText `db:"last_run_stats" json:"last_run_stats,omitempty"`
+	CreatedBy    null.Int       `db:"created_by" json:"created_by,omitempty"`
 
 	// Joined fields
 	SnippetName string `db:"snippet_name" json:"snippet_name,omitempty"`
