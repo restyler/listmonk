@@ -532,3 +532,93 @@ export const deleteRole = (id) => http.delete(
   `/api/roles/${id}`,
   { loading: models.userRoles },
 );
+
+// SQL Snippets
+export const getSQLSnippets = async (params) => http.get(
+  '/api/sql-snippets',
+  {
+    params,
+    loading: models.sqlSnippets,
+    store: models.sqlSnippets,
+  },
+);
+
+export const getSQLSnippet = async (id) => http.get(
+  `/api/sql-snippets/${id}`,
+  { loading: models.sqlSnippets },
+);
+
+export const createSQLSnippet = (data) => http.post(
+  '/api/sql-snippets',
+  data,
+  { loading: models.sqlSnippets },
+);
+
+export const updateSQLSnippet = (data) => http.put(
+  `/api/sql-snippets/${data.id}`,
+  data,
+  { loading: models.sqlSnippets },
+);
+
+export const deleteSQLSnippet = (id) => http.delete(
+  `/api/sql-snippets/${id}`,
+  { loading: models.sqlSnippets },
+);
+
+export const validateSQLSnippet = (data) => http.post(
+  '/api/sql-snippets/validate',
+  data,
+  { loading: models.sqlSnippets },
+);
+
+// Dynamic Segments
+export const getDynamicSegments = async (params) => http.get(
+  '/api/dynamic-segments',
+  {
+    params,
+    loading: models.dynamicSegments,
+    store: models.dynamicSegments,
+  },
+);
+
+export const getDynamicSegment = async (id) => http.get(
+  `/api/dynamic-segments/${id}`,
+  { loading: models.dynamicSegments },
+);
+
+export const createDynamicSegment = (data) => http.post(
+  '/api/dynamic-segments',
+  data,
+  { loading: models.dynamicSegments },
+);
+
+export const updateDynamicSegment = (data) => http.put(
+  `/api/dynamic-segments/${data.id}`,
+  data,
+  { loading: models.dynamicSegments },
+);
+
+export const deleteDynamicSegment = (id) => http.delete(
+  `/api/dynamic-segments/${id}`,
+  { loading: models.dynamicSegments },
+);
+
+export const executeDynamicSegment = (id) => http.post(
+  `/api/dynamic-segments/${id}/execute`,
+  {},
+  { loading: models.dynamicSegments },
+);
+
+export const executeAllDynamicSegments = () => http.post(
+  '/api/dynamic-segments/execute-all',
+  {},
+  { loading: models.dynamicSegments },
+);
+
+export const getDynamicSegmentRuns = async (params) => http.get(
+  '/api/dynamic-segments/runs',
+  {
+    params,
+    loading: models.dynamicSegmentRuns,
+  },
+);

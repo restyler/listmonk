@@ -36,6 +36,12 @@ const routes = [
     component: () => import('../views/Lists.vue'),
   },
   {
+    path: '/lists/dynamic-segments',
+    name: 'dynamicSegments',
+    meta: { title: 'Dynamic Segments', group: 'lists' },
+    component: () => import('../views/DynamicSegments.vue'),
+  },
+  {
     path: '/subscribers',
     name: 'subscribers',
     meta: { title: 'globals.terms.subscribers', group: 'subscribers' },
@@ -136,6 +142,12 @@ const routes = [
     name: 'maintenance',
     meta: { title: 'maintenance.title', group: 'settings' },
     component: () => import('../views/Maintenance.vue'),
+  },
+  {
+    path: '/settings/sql-snippets',
+    name: 'sqlSnippets',
+    meta: { title: 'SQL Snippets', group: 'settings' },
+    component: () => import('../views/SqlSnippets.vue'),
   },
 ];
 

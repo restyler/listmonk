@@ -20,6 +20,9 @@ export const models = Object.freeze({
   settings: 'settings',
   logs: 'logs',
   maintenance: 'maintenance',
+  sqlSnippets: 'sqlSnippets',
+  dynamicSegments: 'dynamicSegments',
+  dynamicSegmentRuns: 'dynamicSegmentRuns',
 });
 
 // Ad-hoc URIs that are used outside of vuex requests.
@@ -36,6 +39,8 @@ export const uris = Object.freeze({
   base: `${baseURL}/static`,
   root: rootURL,
   static: `${baseURL}/static`,
+  sqlSnippets: '/api/sql-snippets',
+  dynamicSegments: '/api/dynamic-segments',
 });
 
 // Keys used in Vuex store.

@@ -38,6 +38,20 @@
               </b-field>
 
               <div v-if="isSearchAdvanced">
+                <b-field addons>
+                  <b-select v-model="selectedSqlSnippet" @input="onSqlSnippetSelect" placeholder="Load SQL snippet...">
+                    <option value="">Select a saved SQL snippet</option>
+                    <option v-for="snippet in sqlSnippets" :key="snippet.id" :value="snippet">
+                      {{ snippet.name }}
+                    </option>
+                  </b-select>
+                  <p class="control">
+                    <router-link to="/settings/sql-snippets" class="button is-outlined">
+                      <b-icon icon="cog" size="is-small" />
+                      <span>Manage</span>
+                    </router-link>
+                  </p>
+                </b-field>
                 <b-input v-model="queryParams.queryExp" @keydown.native.enter="onAdvancedQueryEnter" type="textarea"
                   ref="queryExp" placeholder="subscribers.name LIKE '%user%' or subscribers.status='blocklisted'"
                   data-cy="query" />
@@ -237,10 +251,32 @@ export default Vue.extend({
         order: 'desc',
         subStatus: null,
       },
+
+      // SQL snippets for the dropdown
+      sqlSnippets: [],
+      selectedSqlSnippet: '',
     };
   },
 
   methods: {
+    // Load SQL snippets from the API
+    async loadSqlSnippets() {
+      try {
+        const response = await this.$http.get(uris.sqlSnippets);
+        this.sqlSnippets = response.data.data.results || [];
+      } catch (e) {
+        this.$utils.toast(e.message || 'Error loading SQL snippets', 'is-danger');
+      }
+    },
+
+    // Handle SQL snippet selection
+    onSqlSnippetSelect(snippet) {
+      if (snippet && snippet.query) {
+        this.queryParams.queryExp = snippet.query;
+        this.selectedSqlSnippet = '';
+      }
+    },
+
     // Count the lists from which a subscriber has not unsubscribed.
     listCount(lists) {
       return lists.reduce((defVal, item) => (defVal + (item.subscriptionStatus !== 'unsubscribed' ? 1 : 0)), 0);
@@ -531,6 +567,9 @@ export default Vue.extend({
     if (this.$route.query.subscription_status) {
       this.queryParams.subStatus = this.$route.query.subscription_status;
     }
+
+    // Load SQL snippets
+    this.loadSqlSnippets();
 
     if (this.$route.params.id) {
       this.$api.getSubscriber(parseInt(this.$route.params.id, 10)).then((data) => {
